@@ -12,6 +12,7 @@ namespace Tesis.Domain.Models
     public class ObjetivoIndicadorModel
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
         [ValidateNever]
@@ -29,6 +30,6 @@ namespace Tesis.Domain.Models
         [ValidateNever]
         [ForeignKey("IndicadorId")]
         public IndicadorModel Indicador { get; set; }
-        
+
     }
 }

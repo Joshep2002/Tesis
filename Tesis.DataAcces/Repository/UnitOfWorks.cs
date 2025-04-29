@@ -9,6 +9,8 @@ namespace Tesis.DataAcces.Repository
         public IIndicadorRepository Indicador { get; private set; }
         public IProcesoRepository Proceso { get; private set; }
         public IObjetivoRepository Objetivo { get; private set; }
+        public IObjetivoProcesoIndicadorRepository ObjetivoProcesoIndicador { get; private set; }
+        public IUserRepository Usuario { get; private set; }
 
         public UnitOfWorks(ApplicationDbContext context)
         {
@@ -16,6 +18,8 @@ namespace Tesis.DataAcces.Repository
             Indicador = new IndicadorRepository(_context);
             Proceso = new ProcesoRepository(_context);
             Objetivo = new ObjetivoRepository(_context);
+            ObjetivoProcesoIndicador = new ObjetivoProcesoIndicadorRepository(_context);
+            Usuario = new UserRepository(_context);
         }
 
         public void Save()

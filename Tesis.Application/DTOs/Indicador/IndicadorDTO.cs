@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Tesis.Domain.Models;
+using Tesis.Application.DTOs.Proceso;
 using Tesis.Domain.SD;
 
 namespace Tesis.Application.DTOs.Indicador
@@ -15,9 +10,19 @@ namespace Tesis.Application.DTOs.Indicador
         public int Id { get; set; }
         public string Descripcion { get; set; } = string.Empty;
         public string MetaCumplir { get; set; } = string.Empty;
+        public decimal MetaCumplirValue { get; set; }
         public string MetaReal { get; set; } = string.Empty;
+        public decimal MetaRealValue { get; set; }
         public IndicadorType Tipo { get; set; }
         public EvaluationStatus Evaluacion { get; set; }
+        public MiniProcesoDTO? Proceso { get; set; }
+    }
+    public class MiniIndicadorDTO
+    {
+        public int Id { get; set; }
+        public string Descripcion { get; set; } = string.Empty;
+        public EvaluationStatus Evaluacion { get; set; }
+        
     }
 
     public class IndicadorUpsertDto
@@ -44,4 +49,4 @@ namespace Tesis.Application.DTOs.Indicador
     }
 }
 
-    
+

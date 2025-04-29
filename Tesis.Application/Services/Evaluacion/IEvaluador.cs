@@ -5,6 +5,9 @@ namespace Tesis.Application.Services.Evaluacion
 {
     public interface IEvaluador
     {
-        EvaluationStatus EvaluarPorIndicadores(IEnumerable<IndicadorModel> indicadores);
+        Task<ProcesoModel> EvaluarProcesoAsync(int procesoId);
+        Task<ObjetivoModel> EvaluarObjetivoAsync(int objetivoId);
+        Task<IEnumerable<ProcesoModel>> EvaluarTodosProcesosAsync();
+        Task<IEnumerable<ObjetivoModel>> EvaluarTodosObjetivosAsync();
     }
 }

@@ -16,10 +16,11 @@ namespace Tesis.DataAcces.Repository.IRepository
         void Add(T entity);
         void Remove(T entity);
         void RemoveRange(IEnumerable<T> entities);
+        void AddRange(IEnumerable<T> entities);
 
         // Nuevo método para incluir propiedades de navegación
-        Task<T> GetWithIncludes(Expression<Func<T, bool>> filter, params string[] includeProperties);
-        Task<IEnumerable<T>> GetAllWithIncludes(params string[] includeProperties);
+        Task<T> GetWithIncludes(Expression<Func<T, bool>> filter, string? includeProperties = null);
+        Task<IEnumerable<T>> GetAllWithIncludes(string? includeProperties = null);
 
         // Paginacion
         Task<IEnumerable<T>> GetAllPaged(int pageNumber, int pageSize,

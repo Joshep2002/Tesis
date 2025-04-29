@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Tesis.Domain.Entities;
 using Tesis.Domain.Models;
 
 
@@ -10,8 +11,10 @@ namespace Tesis.DataAcces
         public DbSet<IndicadorModel> Indicadores => Set<IndicadorModel>();
         public DbSet<ProcesoModel> Procesos => Set<ProcesoModel>();
         public DbSet<ObjetivoModel> Objetivos => Set<ObjetivoModel>();
+        public DbSet<ObjetivoProcesoIndicadorModel> ObjetivoProcesosIndicadores => Set<ObjetivoProcesoIndicadorModel>();
+        public DbSet<User> Usuarios => Set<User>();
 
-       // public DbSet<ObjetivoProcesoModel> ObjetivoProcesos => Set<ObjetivoProcesoModel>();
+        // public DbSet<ObjetivoProcesoModel> ObjetivoProcesos => Set<ObjetivoProcesoModel>();
         //public DbSet<ObjetivoIndicadorModel> ObjetivoIndicadores => Set<ObjetivoIndicadorModel>();
 
 
@@ -38,6 +41,25 @@ namespace Tesis.DataAcces
                 .HasOne(op => op.Proceso)
                 .WithMany(p => p.ObjetivoProcesos)
                 .HasForeignKey(op => op.ProcesoId);
+
+            // Configuración para la entidad intermedia ObjetivoProcesoIndicadorModel
+            modelBuilder.Entity<ObjetivoProcesoIndicadorModel>()
+                .HasKey(opi => new { opi.ObjetivoId, opi.ProcesoId, opi.IndicadorId });
+
+            modelBuilder.Entity<ObjetivoProcesoIndicadorModel>()
+                .HasOne(opi => opi.Objetivo)
+                .WithMany(o => o.ObjetivoProcesosIndicadores)
+                .HasForeignKey(opi => opi.ObjetivoId);
+
+            modelBuilder.Entity<ObjetivoProcesoIndicadorModel>()
+                .HasOne(opi => opi.Proceso)
+                .WithMany(p => p.ObjetivoProcesoIndicadores)
+                .HasForeignKey(opi => opi.ProcesoId);
+
+            modelBuilder.Entity<ObjetivoProcesoIndicadorModel>()
+                .HasOne(opi => opi.Indicador)
+                .WithMany(i => i.ObjetivoProcesoIndicadores)
+                .HasForeignKey(opi => opi.IndicadorId);
 
         }
     }

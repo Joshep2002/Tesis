@@ -1,5 +1,8 @@
-﻿using System.Linq.Expressions;
+﻿using System;
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.IdentityModel.Tokens;
 using Tesis.DataAcces.Repository.IRepository;
 
 namespace Tesis.DataAcces.Repository
@@ -77,33 +80,48 @@ namespace Tesis.DataAcces.Repository
 
 
         // Implementación del nuevo método para incluir propiedades
-        public async Task<T> GetWithIncludes(Expression<Func<T, bool>> filter, params string[] includeProperties)
+        public async Task<T> GetWithIncludes(Expression<Func<T, bool>> filter,string? includeProperties)
         {
-            IQueryable<T> query = dbSet;
+            IQueryable<T> query = dbSet.AsSplitQuery();
 
             // Aplica el filtro
             query = query.Where(filter);
 
             // Aplica propiedades relacionadas
-            foreach (var includeProperty in includeProperties)
+            if (!string.IsNullOrEmpty(includeProperties))
             {
-                query = query.Include(includeProperty);
+                foreach (var includeProp in includeProperties
+                    .Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    query = query.Include(includeProp);
+                }
+                ;
             }
 
             return await query.FirstOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<T>> GetAllWithIncludes(params string[] includeProperties)
+        public async Task<IEnumerable<T>> GetAllWithIncludes(string? includeProperties)
         {
-            IQueryable<T> query = dbSet;
+            IQueryable<T> query = dbSet.AsSplitQuery();
 
             // Aplica propiedades relacionadas
-            foreach (var includeProperty in includeProperties)
+            if (!string.IsNullOrEmpty(includeProperties))
             {
-                query = query.Include(includeProperty);
+                foreach (var includeProp in includeProperties
+                    .Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    query = query.Include(includeProp);
+                }
+                  ;
             }
 
             return await query.ToListAsync();
+        }
+
+        public void AddRange(IEnumerable<T> entities)
+        {
+            _context.AddRange(entities);
         }
     }
 }

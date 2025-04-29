@@ -5,7 +5,7 @@
 namespace Tesis.DataAcces.Migrations
 {
     /// <inheritdoc />
-    public partial class FirstMigrationBuilding : Migration
+    public partial class AddMigrationFirst : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -30,7 +30,7 @@ namespace Tesis.DataAcces.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Nombre = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Evaluacion = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -39,16 +39,30 @@ namespace Tesis.DataAcces.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Usuarios",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Usuarios", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Indicadores",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Descripcion = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    MetaCumplir = table.Column<string>(type: "nvarchar(6)", maxLength: 6, nullable: false),
+                    Descripcion = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    MetaCumplir = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     MetaCumplirValue = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     IsMetaCumplirPorcentage = table.Column<bool>(type: "bit", nullable: false),
-                    MetaReal = table.Column<string>(type: "nvarchar(6)", maxLength: 6, nullable: false),
+                    MetaReal = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     MetaRealValue = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     IsMetaRealPorcentage = table.Column<bool>(type: "bit", nullable: false),
                     Evaluacion = table.Column<int>(type: "int", nullable: false),
@@ -116,6 +130,39 @@ namespace Tesis.DataAcces.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "ObjetivoProcesosIndicadores",
+                columns: table => new
+                {
+                    ObjetivoId = table.Column<int>(type: "int", nullable: false),
+                    ProcesoId = table.Column<int>(type: "int", nullable: false),
+                    IndicadorId = table.Column<int>(type: "int", nullable: false),
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ObjetivoProcesosIndicadores", x => new { x.ObjetivoId, x.ProcesoId, x.IndicadorId });
+                    table.ForeignKey(
+                        name: "FK_ObjetivoProcesosIndicadores_Indicadores_IndicadorId",
+                        column: x => x.IndicadorId,
+                        principalTable: "Indicadores",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ObjetivoProcesosIndicadores_Objetivos_ObjetivoId",
+                        column: x => x.ObjetivoId,
+                        principalTable: "Objetivos",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ObjetivoProcesosIndicadores_Procesos_ProcesoId",
+                        column: x => x.ProcesoId,
+                        principalTable: "Procesos",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Indicadores_ProcesoId",
                 table: "Indicadores",
@@ -135,6 +182,16 @@ namespace Tesis.DataAcces.Migrations
                 name: "IX_ObjetivoProcesoModel_ProcesoId",
                 table: "ObjetivoProcesoModel",
                 column: "ProcesoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ObjetivoProcesosIndicadores_IndicadorId",
+                table: "ObjetivoProcesosIndicadores",
+                column: "IndicadorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ObjetivoProcesosIndicadores_ProcesoId",
+                table: "ObjetivoProcesosIndicadores",
+                column: "ProcesoId");
         }
 
         /// <inheritdoc />
@@ -145,6 +202,12 @@ namespace Tesis.DataAcces.Migrations
 
             migrationBuilder.DropTable(
                 name: "ObjetivoProcesoModel");
+
+            migrationBuilder.DropTable(
+                name: "ObjetivoProcesosIndicadores");
+
+            migrationBuilder.DropTable(
+                name: "Usuarios");
 
             migrationBuilder.DropTable(
                 name: "Indicadores");

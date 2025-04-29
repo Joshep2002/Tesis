@@ -11,8 +11,8 @@ using Tesis.DataAcces;
 namespace Tesis.DataAcces.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250425151656_FirstMigrationBuilding")]
-    partial class FirstMigrationBuilding
+    [Migration("20250428152432_AddMigrationFirst")]
+    partial class AddMigrationFirst
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,27 @@ namespace Tesis.DataAcces.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Tesis.Domain.Entities.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Usuarios");
+                });
+
             modelBuilder.Entity("Tesis.Domain.Models.IndicadorModel", b =>
                 {
                     b.Property<int>("Id")
@@ -34,8 +55,7 @@ namespace Tesis.DataAcces.Migrations
 
                     b.Property<string>("Descripcion")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Evaluacion")
                         .HasColumnType("int");
@@ -48,8 +68,7 @@ namespace Tesis.DataAcces.Migrations
 
                     b.Property<string>("MetaCumplir")
                         .IsRequired()
-                        .HasMaxLength(6)
-                        .HasColumnType("nvarchar(6)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("MetaCumplirValue")
                         .HasPrecision(18, 2)
@@ -57,8 +76,7 @@ namespace Tesis.DataAcces.Migrations
 
                     b.Property<string>("MetaReal")
                         .IsRequired()
-                        .HasMaxLength(6)
-                        .HasColumnType("nvarchar(6)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("MetaRealValue")
                         .HasPrecision(18, 2)
@@ -120,6 +138,32 @@ namespace Tesis.DataAcces.Migrations
                     b.ToTable("Objetivos");
                 });
 
+            modelBuilder.Entity("Tesis.Domain.Models.ObjetivoProcesoIndicadorModel", b =>
+                {
+                    b.Property<int>("ObjetivoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProcesoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IndicadorId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.HasKey("ObjetivoId", "ProcesoId", "IndicadorId");
+
+                    b.HasIndex("IndicadorId");
+
+                    b.HasIndex("ProcesoId");
+
+                    b.ToTable("ObjetivoProcesosIndicadores");
+                });
+
             modelBuilder.Entity("Tesis.Domain.Models.ObjetivoProcesoModel", b =>
                 {
                     b.Property<int>("ObjetivoId")
@@ -151,8 +195,7 @@ namespace Tesis.DataAcces.Migrations
 
                     b.Property<string>("Nombre")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -187,6 +230,33 @@ namespace Tesis.DataAcces.Migrations
                     b.Navigation("Objetivo");
                 });
 
+            modelBuilder.Entity("Tesis.Domain.Models.ObjetivoProcesoIndicadorModel", b =>
+                {
+                    b.HasOne("Tesis.Domain.Models.IndicadorModel", "Indicador")
+                        .WithMany("ObjetivoProcesoIndicadores")
+                        .HasForeignKey("IndicadorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Tesis.Domain.Models.ObjetivoModel", "Objetivo")
+                        .WithMany("ObjetivoProcesosIndicadores")
+                        .HasForeignKey("ObjetivoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Tesis.Domain.Models.ProcesoModel", "Proceso")
+                        .WithMany("ObjetivoProcesoIndicadores")
+                        .HasForeignKey("ProcesoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Indicador");
+
+                    b.Navigation("Objetivo");
+
+                    b.Navigation("Proceso");
+                });
+
             modelBuilder.Entity("Tesis.Domain.Models.ObjetivoProcesoModel", b =>
                 {
                     b.HasOne("Tesis.Domain.Models.ObjetivoModel", "Objetivo")
@@ -209,6 +279,8 @@ namespace Tesis.DataAcces.Migrations
             modelBuilder.Entity("Tesis.Domain.Models.IndicadorModel", b =>
                 {
                     b.Navigation("ObjetivoIndicadores");
+
+                    b.Navigation("ObjetivoProcesoIndicadores");
                 });
 
             modelBuilder.Entity("Tesis.Domain.Models.ObjetivoModel", b =>
@@ -216,11 +288,15 @@ namespace Tesis.DataAcces.Migrations
                     b.Navigation("ObjetivoIndicadores");
 
                     b.Navigation("ObjetivoProcesos");
+
+                    b.Navigation("ObjetivoProcesosIndicadores");
                 });
 
             modelBuilder.Entity("Tesis.Domain.Models.ProcesoModel", b =>
                 {
                     b.Navigation("Indicadores");
+
+                    b.Navigation("ObjetivoProcesoIndicadores");
 
                     b.Navigation("ObjetivoProcesos");
                 });

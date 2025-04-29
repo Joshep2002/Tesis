@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using Tesis.Application.Services.Evaluacion;
 using Tesis.DataAcces.Repository.IRepository;
 
@@ -9,77 +11,65 @@ namespace Tesis.Server.Controllers
     [ApiController]
     public class EvaluacionController : ControllerBase
     {
-        private readonly IUnitOfWorks _unitOfWorks;
         private readonly IEvaluador _evaluador;
 
-        public EvaluacionController(IUnitOfWorks unitOfWorks, IEvaluador evaluador)
-        {
-            _unitOfWorks = unitOfWorks;
-            _evaluador = evaluador;
-        }
+        public EvaluacionController(IEvaluador evaluador)
+            => _evaluador = evaluador;
 
         [HttpPost("evaluar-proceso/{id}")]
         public async Task<IActionResult> EvaluateProceso(int id)
         {
-            var proceso = await _unitOfWorks.Proceso.GetWithIncludes(p => p.Id == id, includeProperties: "Indicadores");
 
-            if (proceso == null) return NotFound();
-
-            _evaluador.EvaluarPorIndicadores(proceso.Indicadores);
-
-            _unitOfWorks.Proceso.Update(proceso);
-            await _unitOfWorks.SaveAsync();
-
-            return Ok(proceso);
+            var result = await _evaluador.EvaluarProcesoAsync(id);
+            if (result is null) return NoContent();
+            return Ok(result);
         }
 
         [HttpPost("evaluar-objetivo/{id}")]
         public async Task<IActionResult> EvaluateObjetivo(int id)
         {
-            var objetivo = await _unitOfWorks.Objetivo.GetWithIncludes(p => p.Id == id, includeProperties: "ObjetivoIndicadores");
-
-            if (objetivo == null) return NotFound();
-
-            var indicadoresObjetivo = objetivo.ObjetivoProcesos.SelectMany(op => op.Proceso.Indicadores);
-            objetivo.Evaluacion = _evaluador.EvaluarPorIndicadores(indicadoresObjetivo);
-
-            _unitOfWorks.Objetivo.Update(objetivo);
-            _unitOfWorks.Save();
-
-            return Ok(objetivo);
+            var result = await _evaluador.EvaluarObjetivoAsync(id);
+            if (result is null) return NoContent();
+            return Ok(result);
         }
 
-
-
-        [HttpPost("evaluar-all")]
-        public async Task<IActionResult> EvaluateAll()
+        [HttpPost("evaluar-procesos")]
+        public async Task<IActionResult> EvaluateAllProcesos()
         {
-            var procesos = await _unitOfWorks.Proceso.GetAll();
+            var procesos = await _evaluador.EvaluarTodosProcesosAsync();
 
-            foreach (var proceso in procesos)
-            {
-                _evaluador.EvaluarPorIndicadores(proceso.Indicadores);
-                _unitOfWorks.Proceso.Update(proceso);
-            }
-
-            await _unitOfWorks.SaveAsync();
+            if (!procesos.Any())
+                return NoContent();
 
             return Ok(procesos);
         }
 
-        /* 
-         Flujo en la vista Blazor
-         Botón individual de "Evaluar":
-         
-         Llama al endpoint /api/Proceso/evaluate/{id}.
-         
-         Actualiza el estado del proceso específico en la tabla.
-         
-         Botón de "Evaluar Todos":
-         
-         Llama al endpoint /api/Proceso/evaluate-all.
-         
-         Actualiza el estado de todos los procesos en la tabla.
-         */
+        [HttpPost("evaluar-objetivos")]
+        public async Task<IActionResult> EvaluateAllObjetivos()
+        {
+            var objetivos = await _evaluador.EvaluarTodosObjetivosAsync();
+
+            if (!objetivos.Any())
+                return NoContent();
+
+            return Ok(objetivos);
+        }
     }
+
+
+    /* 
+     Flujo en la vista Blazor
+     Botón individual de "Evaluar":
+
+     Llama al endpoint /api/Proceso/evaluate/{id}.
+
+     Actualiza el estado del proceso específico en la tabla.
+
+     Botón de "Evaluar Todos":
+
+     Llama al endpoint /api/Proceso/evaluate-all.
+
+     Actualiza el estado de todos los procesos en la tabla.
+     */
 }
+

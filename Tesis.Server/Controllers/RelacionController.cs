@@ -12,11 +12,13 @@ namespace Tesis.Server.Controllers
     {
         private readonly IUnitOfWorks _unitOfWorks;
         private readonly IEvaluador _evaluador;
+        private readonly ILogger<RelacionController> _logger;
 
-        public RelacionController(IUnitOfWorks unitOfWorks, IEvaluador evaluador)
+        public RelacionController(IUnitOfWorks unitOfWorks, IEvaluador evaluador, ILogger<RelacionController> logger)
         {
             _unitOfWorks = unitOfWorks;
             _evaluador = evaluador;
+            _logger = logger;
         }
 
         [HttpPatch("indicador-to-proceso/{procesoId}")]
@@ -80,50 +82,128 @@ namespace Tesis.Server.Controllers
         }
 
 
-
-        // Ejemplo de endpoint en el controlador
-        [HttpPost("objetivos/{objectiveId}/indicador")]
-        public async Task<IActionResult> LinkIndicatorsToObjective(int objectiveId, [FromBody] List<int> indicatorIds)
+        [HttpPost("vincular-proceso-objetivo")]
+        public async Task<IActionResult> VincularProcesoAObjetivo(int procesoId, int objetivoId, List<int> indicadorIdsSeleccionados)
         {
-            // Obtener el objetivo; es recomendable incluir las relaciones actuales para evitar duplicados.
-            var objective = await _unitOfWorks.Objetivo.GetWithIncludes(
-                                 o => o.Id == objectiveId,
-                                 includeProperties: "ObjetivoIndicadores");
+            _logger.LogDebug("Iniciando Vinculacion de Proceso-Indicadores a Objetivo....");
 
-            if (objective == null)
-                return NotFound($"El objetivo con ID {objectiveId} no existe.");
+            // Verificar si el objetivo y el proceso existen
+            var proceso = await _unitOfWorks.Proceso.GetWithIncludes(p => p.Id == procesoId, "Indicadores");
+            var objetivo = await _unitOfWorks.Objetivo.GetWithIncludes(o => o.Id == objetivoId, "ObjetivoProcesos");
 
-            // Iterar por cada ID de indicador a vincular
-            foreach (var indicatorId in indicatorIds)
+            if (proceso == null)
             {
-                // Buscar el indicador para validar su existencia
-                var indicador = await _unitOfWorks.Indicador.Get(i => i.Id == indicatorId);
-                if (indicador == null)
-                    return NotFound($"El indicador con ID {indicatorId} no existe.");
+                _logger.LogWarning("Proceso ID:{procesoId} a Vincular al Objetivo:{idObjetivo} no existe en Base de Datos", procesoId, objetivoId);
+                return NotFound("Proceso no encontrado");
+            }
 
-                // Verificar si ya existe la relación (esto asume que en ObjetivoIndicadores existe la propiedad IndicadorId)
-                bool existeRelacion = objective.ObjetivoIndicadores
-                                                 .Any(oi => oi.IndicadorId == indicatorId);
+            if (objetivo == null)
+            {
+                _logger.LogWarning("Objetivo:{idObjetivo} no existe en Base de Datos", objetivoId);
+                return NotFound("Objetivo no encontrado");
+            }
 
-                if (!existeRelacion)
+            _logger.LogDebug("Creando relacion entre el proceso - objetivo con los indicadores seleccionados");
+
+            var relacionesAAgregar = new List<ObjetivoProcesoIndicadorModel>();
+
+            foreach (var indicadorId in indicadorIdsSeleccionados)
+            {
+                var indicador = proceso.Indicadores.FirstOrDefault(i => i.Id == indicadorId);
+
+                if (indicador != null)
                 {
-                    // Crear la relación. Si en tu modelo se manejan propiedades adicionales (por ejemplo, fecha de vinculación),
-                    // agrégalas aquí según convenga.
-                    var objetivoIndicador = new ObjetivoIndicadorModel
-                    {
-                        ObjetivoId = objective.Id,
-                        IndicadorId = indicatorId
-                    };
+                    // Verificar si la relación ya existe
+                    var existeRelacion = await _unitOfWorks.ObjetivoProcesoIndicador
+                        .GetWithIncludes(opi => opi.ObjetivoId == objetivoId && opi.ProcesoId == procesoId && opi.IndicadorId == indicadorId);
 
-                    // Agregar la relación al objetivo.
-                    objective.ObjetivoIndicadores.Add(objetivoIndicador);
+                    if (existeRelacion != null)
+                    {
+                        // Relación ya existe, no la agregues
+                        _logger.LogWarning("La relación Objetivo-{0} Proceso-{1} Indicador-{2} ya existe.", objetivoId, procesoId, indicadorId);
+                        return BadRequest($"El indicador {indicadorId} ya esta relacionado al objetivo {objetivoId}");
+                    }
+                    else
+                    {
+                        // No existe la relación, puedes agregarla
+                        var nuevaRelacion = new ObjetivoProcesoIndicadorModel
+                        {
+                            ObjetivoId = objetivoId,
+                            ProcesoId = procesoId,
+                            IndicadorId = indicadorId
+                        };
+
+                        relacionesAAgregar.Add(nuevaRelacion);
+                        _logger.LogInformation("Nueva Relacion Objetivo-Proceso-Indicador preparada para ser agregada.");
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Indicador ID:{id} no encontrado", indicadorId);
+                    return NotFound($"Indicador ID:{indicadorId} no encontrado.");
                 }
             }
 
-            // Persistir cambios en la base de datos
+            // Si hay relaciones a agregar, las agregamos a la base de datos
+            if (relacionesAAgregar.Any())
+            {
+                _unitOfWorks.ObjetivoProcesoIndicador.AddRange(relacionesAAgregar);
+                await _unitOfWorks.SaveAsync();
+                _logger.LogInformation("Vinculacion Objetivo-Proceso-Indicador realizada correctamente");
+            }
+            else
+            {
+                _logger.LogInformation("No se agregaron relaciones, ya existían.");
+            }
+
+            return Ok($"Indicadores {string.Join(", ", relacionesAAgregar.Select(r => r.IndicadorId))} agregados al Objetivo {objetivoId}");
+
+        }
+
+        [HttpDelete("desvincular-proceso-objetivo/{objetivoId}/{procesoId}")]
+        public async Task<IActionResult> DesvincularProcesoObjetivo(int objetivoId, int procesoId)
+        {
+            // Buscar todas las relaciones ObjetivoProcesoIndicador que correspondan a ese objetivo y proceso
+            var relaciones = await _unitOfWorks.ObjetivoProcesoIndicador.GetAllValuesByParameter(
+                opi => opi.ObjetivoId == objetivoId && opi.ProcesoId == procesoId);
+
+            if (!relaciones.Any())
+            {
+                return NotFound("No se encontraron relaciones para desvincular.");
+            }
+
+            _unitOfWorks.ObjetivoProcesoIndicador.RemoveRange(relaciones);
+            await _unitOfWorks.SaveAsync();
+            return Ok($"El proceso {procesoId} y sus indicadores vinculados fueron desvinculados del objetivo {objetivoId}.");
+        }
+
+        [HttpDelete("desvincular-indicadores-proceso")]
+        public async Task<IActionResult> DesvincularIndicadoresDeProceso(int procesoId, int objetivoId, [FromBody] List<int> indicadorIds)  
+        {
+            _logger.LogDebug("Iniciando la desvinculación de indicadores: {IndicadorIds} del proceso {ProcesoId} en el objetivo {ObjetivoId}",
+                             string.Join(", ", indicadorIds), procesoId, objetivoId);
+
+            // Obtener las relaciones que coinciden con el objetivo, proceso e indicadores seleccionados.
+            var relaciones = await _unitOfWorks.ObjetivoProcesoIndicador.GetAllValuesByParameter(
+                opi => opi.ObjetivoId == objetivoId
+                       && opi.ProcesoId == procesoId
+                       && indicadorIds.Contains(opi.IndicadorId));
+
+            if (!relaciones.Any())
+            {
+                _logger.LogWarning("No se encontraron relaciones para desvincular para el objetivo {ObjetivoId} y proceso {ProcesoId} con los indicadores especificados.", objetivoId, procesoId);
+                return NotFound("No se encontraron relaciones para eliminar.");
+            }
+
+            _unitOfWorks.ObjetivoProcesoIndicador.RemoveRange(relaciones);
             await _unitOfWorks.SaveAsync();
 
-            return Ok("Indicadores vinculados al objetivo exitosamente.");
+            _logger.LogInformation("Se han removido las relaciones de indicadores: {IndicadorIds} del proceso {ProcesoId} en el objetivo {ObjetivoId}.",
+                                     string.Join(", ", relaciones.Select(r => r.IndicadorId)), procesoId, objetivoId);
+
+            return Ok($"Se removieron los indicadores {string.Join(", ", relaciones.Select(r => r.IndicadorId))} del proceso {procesoId} en el objetivo {objetivoId}.");
         }
+
     }
+
 }

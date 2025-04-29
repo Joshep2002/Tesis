@@ -1,6 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Mapster;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 using Tesis.Application.DTOs.Proceso;
 using Tesis.DataAcces.Repository.IRepository;
 using Tesis.Domain.Models;
@@ -30,19 +29,13 @@ namespace Tesis.Server.Controllers
 
             AllProcess.AllProcesosConsoleMessage();
 
-            if (AllProcess.IsNullOrEmpty())
+            if (!AllProcess.Any() || AllProcess is null)
             {
                 _logger.LogWarning("No existe ningun proceso en la Base de Datos");
                 return NoContent();
             }
-                
 
-            var procesoDto = AllProcess.Select(process => new ProcesoDTO
-            {
-                Id = process.Id,
-                Nombre = process.Nombre,
-                Evaluacion = process.Evaluacion,
-            });
+            var procesoDto = AllProcess.Adapt<List<ProcesoDTO>>();
 
             _logger.LogDebug("Termino la Obtencion de todos los procesos de la Base de Datos");
             return Ok(procesoDto);
@@ -59,12 +52,8 @@ namespace Tesis.Server.Controllers
                 return NotFound("Proceso no encontrado");
             }
 
-            var procesoDto = new ProcesoDTO
-            {
-                Id = Proceso.Id,
-                Nombre = Proceso.Nombre,
-                Evaluacion = Proceso.Evaluacion
-            };
+            var procesoDto = Proceso.Adapt<ProcesoDTO>();
+
 
             _logger.LogInformation("Proceso Obtenido Correctamente\n" +
                 "Id:{id}\n" +
@@ -110,7 +99,7 @@ namespace Tesis.Server.Controllers
                 return NotFound($"El Proceso con {id} no existe");
 
             // Safely iterate over indicators using a for loop
-            var indicadoresList = Proceso.Indicadores.ToList(); // Create a copy of the list to avoid conflicts
+            var indicadoresList = Proceso.Indicadores.ToList(); 
 
             // Unlink todos los indicadores
             Proceso.Indicadores.ToList().ForEach(indicador =>
